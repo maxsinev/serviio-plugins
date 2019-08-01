@@ -172,11 +172,12 @@ class Twitch extends WebResourceUrlExtractor {
 	
 	List<WebResourceItem> extractHlsStream(String channelName) {
 		def items = [] // prepare list
-		
-		def auth = new JsonSlurper().parseText(new URL(String.format(TWITCH_ACCESSTOKEN_API, channelName.toLowerCase())).text)
+		def parser = new JsonSlurper()
+		def auth = parser.parseText(new URL(String.format(TWITCH_ACCESSTOKEN_API, channelName.toLowerCase())).text)
+		def channelId = parser.parseText(auth.token).channel_id
 		
 		//getting stream thubnail
-		def streamJson = new JsonSlurper().parseText(new URL(String.format(TWITCH_STREAM_API, channelName.toLowerCase())).text)
+		def streamJson = parser.parseText(new URL(String.format(TWITCH_STREAM_API, channelId)).text)
 		def thumbnailUrl
 		if (streamJson.stream) {
 			thumbnailUrl = streamJson.stream.preview.medium
