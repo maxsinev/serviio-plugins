@@ -54,14 +54,14 @@ import groovy.json.*
  *	    For a copy of the GNU Lesser General Public License, see 
  *	    <https://www.gnu.org/licenses/lgpl.txt>.
  *
- *	@version 17
+ *	@version 18
  *	@author <a href="https://twitter.com/bogenpirat">bog</a>
  *
  */
 
 class Twitch extends WebResourceUrlExtractor {
 	final String CLIENT_ID = "jzkbprff40iqj646a697cyrvl0zt2m6"
-	final Integer VERSION = 17
+	final Integer VERSION = 18
 	final String VALID_FEED_URL = "^https?://(?:[^\\.]*.)?twitch\\.tv/([a-zA-Z0-9_]+).*\$"
 	final String VALID_VOD_URL = "^https?://(?:[^\\.]*.)?twitch\\.tv/([a-zA-Z0-9_]+)/(b|c)/(\\d+)[^\\d]*\$"
 	final String VALID_HLS_VOD_URL = "^https?://(?:[^\\.]*.)?twitch\\.tv/([a-zA-Z0-9_]+)/v/(\\d+)[^\\d]*\$"
@@ -72,6 +72,7 @@ class Twitch extends WebResourceUrlExtractor {
 	final String TWITCH_ACCESSTOKEN_API = "https://api.twitch.tv/api/channels/%s/access_token?client_id=${CLIENT_ID}"
 	final String TWITCH_HLSVOD_ACCESSTOKEN_API = "https://api.twitch.tv/api/vods/%s/access_token?as3=t&client_id=${CLIENT_ID}"
 	final String TWITCH_STREAM_API = "https://api.twitch.tv/kraken/streams/%s?client_id=${CLIENT_ID}"
+	final String TWITCH_THUMBNAIL_TEMPLATE = "https://static-cdn.jtvnw.net/previews-ttv/live_user_%s-320x180.jpg"
 
 	int getVersion() {
 		return VERSION
@@ -172,18 +173,11 @@ class Twitch extends WebResourceUrlExtractor {
 	
 	List<WebResourceItem> extractHlsStream(String channelName) {
 		def items = [] // prepare list
-		def parser = new JsonSlurper()
-		def auth = parser.parseText(new URL(String.format(TWITCH_ACCESSTOKEN_API, channelName.toLowerCase())).text)
-		def channelId = parser.parseText(auth.token).channel_id
+		def channelNameLow = channelName.toLowerCase()
 		
-		//getting stream thubnail
-		def streamJson = parser.parseText(new URL(String.format(TWITCH_STREAM_API, channelId)).text)
-		def thumbnailUrl
-		if (streamJson.stream) {
-			thumbnailUrl = streamJson.stream.preview.medium
-		}
+		def auth = new JsonSlurper().parseText(new URL(String.format(TWITCH_ACCESSTOKEN_API, channelNameLow)).text)
 		
-		def playlist = new URL(String.format(TWITCH_HLS_API_PLAYLIST_URL, channelName.toLowerCase(), URLEncoder.encode(auth.sig), URLEncoder.encode(auth.token))).text
+		def playlist = new URL(String.format(TWITCH_HLS_API_PLAYLIST_URL, channelNameLow, URLEncoder.encode(auth.sig), URLEncoder.encode(auth.token))).text
 		
 		def m = playlist =~ /(?s)NAME="([^"]*)".*?BANDWIDTH=(\d+).*?(http:\/\/.+?)[\n\r]/
 		
@@ -194,7 +188,7 @@ class Twitch extends WebResourceUrlExtractor {
 				expiresImmediately: true,
 				cacheKey: title,
 				url: m.group(3),
-				thumbnailUrl: thumbnailUrl,
+				thumbnailUrl: String.format(TWITCH_THUMBNAIL_TEMPLATE, channelNameLow),
 				live: true
 				])
 		}
